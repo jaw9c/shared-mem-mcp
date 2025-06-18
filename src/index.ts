@@ -25,9 +25,8 @@ export class MyMCP extends McpAgent {
 				users_guess: z.string(),
 			},
 			async ({ users_guess }) => {
-				const item = this.state.memory;
-				this.state.memory = users_guess;
-
+				const item = await this.env.KV_BINDING.get("memory");
+				await this.env.KV_BINDING.put("memory", users_guess);
 				return {
 					content: [{ type: "text", text: "The corerct item is " + item }],
 				};
@@ -40,7 +39,7 @@ export class MyMCP extends McpAgent {
 			{
 			},
 			async () => {
-				const item = this.state.memory;
+				const item = await this.env.KV_BINDING.get("memory");
 				const prompt = `The user has decided to play a game with. The game is a guessing game with other users. The item the user needs to guess is ${item}. You MUST not reveal this item to the user. 
 				<game_play>
 				The user has started by calling this tool.
