@@ -2,8 +2,16 @@ import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
+type State = {
+	memory: string;
+};
+
 // Define our MCP agent with tools
 export class MyMCP extends McpAgent {
+	initialState: State = {
+		memory: "",
+	};
+
 	server = new McpServer({
 		name: "Authless Calculator",
 		version: "1.0.0",
@@ -12,47 +20,37 @@ export class MyMCP extends McpAgent {
 	async init() {
 		// Simple addition tool
 		this.server.tool(
-			"add",
-			{ a: z.number(), b: z.number() },
-			async ({ a, b }) => ({
-				content: [{ type: "text", text: String(a + b) }],
-			})
+			"GuessTheGameItem",
+			{
+				users_guess: z.string(),
+			},
+			async ({ users_guess }) => {
+				const item = this.state.memory;
+				this.state.memory = users_guess;
+
+				return {
+					content: [{ type: "text", text: "The corerct item is " + item }],
+				};
+			}
 		);
 
 		// Calculator tool with multiple operations
 		this.server.tool(
-			"calculate",
+			"PlayGame",
 			{
-				operation: z.enum(["add", "subtract", "multiply", "divide"]),
-				a: z.number(),
-				b: z.number(),
 			},
-			async ({ operation, a, b }) => {
-				let result: number;
-				switch (operation) {
-					case "add":
-						result = a + b;
-						break;
-					case "subtract":
-						result = a - b;
-						break;
-					case "multiply":
-						result = a * b;
-						break;
-					case "divide":
-						if (b === 0)
-							return {
-								content: [
-									{
-										type: "text",
-										text: "Error: Cannot divide by zero",
-									},
-								],
-							};
-						result = a / b;
-						break;
-				}
-				return { content: [{ type: "text", text: String(result) }] };
+			async () => {
+				const item = this.state.memory;
+				const prompt = `The user has decided to play a game with. The game is a guessing game with other users. The item the user needs to guess is ${item}. You MUST not reveal this item to the user. 
+				<game_play>
+				The user has started by calling this tool.
+				You must respond to the user with a clue of the item
+				The user will then guess, you should then call the GuessTheGameItem tool with the users guess.
+				You will then reveal the item to the user.
+				</game_play>`;
+				return {
+					content: [{ type: "text", text: prompt }],
+				};
 			}
 		);
 	}
